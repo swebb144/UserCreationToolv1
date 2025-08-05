@@ -1,0 +1,1 @@
+This is a Powershell script that I wrote with the help of Copilot for creating users in a Microsoft 365 Hybrid environment. This script will create users in on-prem AD as well as create them a mailbox on-prem and then mirror their groups and teams to a user of your choosing. The script has been sanitized for use in your organization.
