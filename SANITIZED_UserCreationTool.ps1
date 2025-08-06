@@ -133,6 +133,35 @@ Write-Log "Removed Exchange session."
 Write-Log "Waiting 30 minutes before proceeding to Teams provisioning..."
 Start-Sleep -Seconds 1800
 
+# Retry logic to get Azure AD user object
+$NewUserAAD = $null
+$retryCount = 0
+$maxRetries = 10
+$retryDelaySeconds = 30
+
+do {
+    try {
+        $NewUserAAD = Get-MgUser -UserId $UPN
+        if ($NewUserAAD) {
+            Write-Log "Successfully retrieved Azure AD user object for: $UPN"
+            break
+        } else {
+            Write-Log "Azure AD user not found yet: $UPN. Retrying in $retryDelaySeconds seconds..." "WARNING"
+        }
+    } catch {
+        Write-Log "Error retrieving Azure AD user: $UPN. Retrying... Error: $_" "WARNING"
+    }
+
+    Start-Sleep -Seconds $retryDelaySeconds
+    $retryCount++
+} while ($retryCount -lt $maxRetries)
+
+if (-not $NewUserAAD) {
+    Write-Log "Azure AD user not found after $maxRetries retries: $UPN" "ERROR"
+    return
+}
+
+
 # Assign Microsoft 365 license
 $SkuId = "18181a46-0d4e-45cd-891e-60aabd171b4e"
 try {
@@ -180,3 +209,4 @@ try {
 } catch {
     Write-Log "Failed to retrieve or assign Azure AD group memberships. Error: $_" "ERROR"
 }
+
