@@ -137,7 +137,7 @@ Start-Sleep -Seconds 1800
 $NewUserAAD = $null
 $retryCount = 0
 $maxRetries = 10
-$retryDelaySeconds = 30
+$retryDelaySeconds = 60
 
 do {
     try {
@@ -209,4 +209,5 @@ try {
 } catch {
     Write-Log "Failed to retrieve or assign Azure AD group memberships. Error: $_" "ERROR"
 }
+
 
