@@ -205,7 +205,7 @@ try {
 }
 
 # Assign Microsoft 365 license
-$SkuId = "18181a46-0d4e-45cd-891e-60aabd171b4e"
+$SkuId = "<your license sku id>"
 try {
     Set-MgUser -UserId $NewUserAAD.Id -UsageLocation "US"
     Set-MgUserLicense -UserId $NewUserAAD.Id -AddLicenses @{SkuId=$SkuId} -RemoveLicenses @()
@@ -213,3 +213,4 @@ try {
 } catch {
     Write-Log "Failed to assign license to user: $Username. Error: $_" "ERROR"
 }
+
