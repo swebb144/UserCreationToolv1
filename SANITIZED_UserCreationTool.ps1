@@ -1,5 +1,5 @@
 # Define log file path
-$LogFile = "<path to your log file>"
+$LogFile = "C:\UserCreationTool\UserProvisioningLog.txt"
 
 # Function to write to log
 function Write-Log {
@@ -23,7 +23,7 @@ $FirstName = Read-Host "Enter First Name"
 $LastName = Read-Host "Enter Last Name"
 $Username = Read-Host "Enter Username (e.g., jdoe)"
 $Password = Read-Host "Enter Password" -AsSecureString
-$OU = Read-Host "Enter OU path (e.g., OU=Users,DC=<your>,DC=<domain>)"
+$OU = Read-Host "Enter OU path (e.g., OU=Users,DC=KEARNY,DC=LOCAL)"
 $ReferenceUsername = Read-Host "Enter reference username to copy group memberships from"
 
 # Check if OU is valid
@@ -37,8 +37,8 @@ try {
 }
 
 # Construct UPN and routing address
-$UPN = "$Username@<yourdomain>.com"
-$RemoteRouting = "$Username@<yourdomain>.mail.onmicrosoft.com"
+$UPN = "$Username@kearnycountyhospital.com"
+$RemoteRouting = "$Username@kearnycountyhospital.mail.onmicrosoft.com"
 
 # Get reference user's local AD group memberships
 $ReferenceGroups = Get-ADUser -Identity $ReferenceUsername -Properties MemberOf | Select-Object -ExpandProperty MemberOf
@@ -108,7 +108,7 @@ foreach ($groupDN in $ReferenceGroups) {
 }
 
 # Connect to on-prem Exchange server
-$ExchangeServer = "<your_exchange_server>"
+$ExchangeServer = "bumblebee.kearny.local"
 try {
     $Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$ExchangeServer/PowerShell/" -Authentication Kerberos
     Import-PSSession $Session -DisableNameChecking
@@ -129,9 +129,12 @@ try {
 Remove-PSSession $Session
 Write-Log "Removed Exchange session."
 
-# Wait 30 minutes before proceeding
-Write-Log "Waiting 30 minutes before proceeding to Teams provisioning..."
-Start-Sleep -Seconds 1800
+#Sync AD
+Start-AdSyncSyncCycle -PolicyType Delta
+
+# Wait 10 minutes before proceeding
+Write-Log "Waiting 10 minutes before proceeding to Teams provisioning..."
+Start-Sleep -Seconds 600
 
 # Retry logic to get Azure AD user object
 $NewUserAAD = $null
@@ -162,15 +165,6 @@ if (-not $NewUserAAD) {
 }
 
 
-# Assign Microsoft 365 license
-$SkuId = "18181a46-0d4e-45cd-891e-60aabd171b4e"
-try {
-    Set-MgUserLicense -UserId $NewUserAAD.Id -AddLicenses @{SkuId=$SkuId} -RemoveLicenses @()
-    Write-Log "Assigned license ($SkuId) to user: $Username"
-} catch {
-    Write-Log "Failed to assign license to user: $Username. Error: $_" "ERROR"
-}
-
 # Connect to Microsoft Teams
 Connect-MicrosoftTeams
 Write-Log "Connected to Microsoft Teams."
@@ -193,7 +187,7 @@ foreach ($team in $teams) {
 
 # Cloud group membership provisioning
 try {
-    $ReferenceUserAAD = Get-MgUser -UserId "$ReferenceUsername@<yourdomain>.com"
+    $ReferenceUserAAD = Get-MgUser -UserId "$ReferenceUsername@kearnycountyhospital.com"
     $NewUserAAD = Get-MgUser -UserId $UPN
     $CloudGroups = Get-MgUserMemberOf -UserId $ReferenceUserAAD.Id | Where-Object { $_.ODataType -eq "#microsoft.graph.group" }
     Write-Log "Retrieved Azure AD group memberships for reference user."
@@ -210,4 +204,12 @@ try {
     Write-Log "Failed to retrieve or assign Azure AD group memberships. Error: $_" "ERROR"
 }
 
-
+# Assign Microsoft 365 license
+$SkuId = "18181a46-0d4e-45cd-891e-60aabd171b4e"
+try {
+    Set-MgUser -UserId $NewUserAAD.Id -UsageLocation "US"
+    Set-MgUserLicense -UserId $NewUserAAD.Id -AddLicenses @{SkuId=$SkuId} -RemoveLicenses @()
+    Write-Log "Assigned license ($SkuId) to user: $Username"
+} catch {
+    Write-Log "Failed to assign license to user: $Username. Error: $_" "ERROR"
+}
