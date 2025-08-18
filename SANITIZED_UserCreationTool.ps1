@@ -228,7 +228,7 @@ $button.Add_Click({
         }
 
         Update-Progress 95 "Assigning license..."
-        $SkuId = "18181a46-0d4e-45cd-891e-60aabd171b4e"
+        $SkuId = "licensesku"
         Set-MgUser -UserId $NewUserAAD.Id -UsageLocation "US"
         Set-MgUserLicense -UserId $NewUserAAD.Id -AddLicenses @{SkuId=$SkuId} -RemoveLicenses @()
         Write-Log "Assigned license ($SkuId) to user: $Username"
@@ -242,4 +242,5 @@ $button.Add_Click({
 
 # Show form
 $form.ShowDialog()
+
 
