@@ -23,7 +23,7 @@ $FirstName = Read-Host "Enter First Name"
 $LastName = Read-Host "Enter Last Name"
 $Username = Read-Host "Enter Username (e.g., jdoe)"
 $Password = Read-Host "Enter Password" -AsSecureString
-$OU = Read-Host "Enter OU path (e.g., OU=Users,DC=KEARNY,DC=LOCAL)"
+$OU = Read-Host "Enter OU path (e.g., OU=Users,DC=YOUR,DC=DOMAIN)"
 $ReferenceUsername = Read-Host "Enter reference username to copy group memberships from"
 
 # Check if OU is valid
@@ -37,8 +37,8 @@ try {
 }
 
 # Construct UPN and routing address
-$UPN = "$Username@kearnycountyhospital.com"
-$RemoteRouting = "$Username@kearnycountyhospital.mail.onmicrosoft.com"
+$UPN = "$Username@kyourdomain.com"
+$RemoteRouting = "$Username@yourdomain.mail.onmicrosoft.com"
 
 # Get reference user's local AD group memberships
 $ReferenceGroups = Get-ADUser -Identity $ReferenceUsername -Properties MemberOf | Select-Object -ExpandProperty MemberOf
@@ -108,7 +108,7 @@ foreach ($groupDN in $ReferenceGroups) {
 }
 
 # Connect to on-prem Exchange server
-$ExchangeServer = "bumblebee.kearny.local"
+$ExchangeServer = "yourexchangeserver"
 try {
     $Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$ExchangeServer/PowerShell/" -Authentication Kerberos
     Import-PSSession $Session -DisableNameChecking
@@ -187,7 +187,7 @@ foreach ($team in $teams) {
 
 # Cloud group membership provisioning
 try {
-    $ReferenceUserAAD = Get-MgUser -UserId "$ReferenceUsername@kearnycountyhospital.com"
+    $ReferenceUserAAD = Get-MgUser -UserId "$ReferenceUsername@yourdomain.com"
     $NewUserAAD = Get-MgUser -UserId $UPN
     $CloudGroups = Get-MgUserMemberOf -UserId $ReferenceUserAAD.Id | Where-Object { $_.ODataType -eq "#microsoft.graph.group" }
     Write-Log "Retrieved Azure AD group memberships for reference user."
@@ -213,4 +213,5 @@ try {
 } catch {
     Write-Log "Failed to assign license to user: $Username. Error: $_" "ERROR"
 }
+
 
