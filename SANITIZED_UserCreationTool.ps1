@@ -53,7 +53,7 @@ $button.Size = [System.Drawing.Size]::new(120, 30)
 $form.Controls.Add($button)
 
 # Log file path
-$LogFile = "C:\UserCreationTool\UserProvisioningLog.txt"
+$LogFile = "<pathtologfile>\UserProvisioningLog.txt"
 
 function Write-Log {
     param (
@@ -109,8 +109,8 @@ $button.Add_Click({
     $Password = ConvertTo-SecureString $fields["Password"].Text -AsPlainText -Force
     $OU = $fields["OU Path"].Text
     $ReferenceUsername = $fields["Reference Username"].Text
-    $UPN = "$Username@yourdomain.com"
-    $RemoteRouting = "$Username@yourdomain.mail.onmicrosoft.com"
+    $UPN = "$Username@<yourdomain>.com"
+    $RemoteRouting = "$Username@<yourdomain>.mail.onmicrosoft.com"
 
     if (-not (Validate-UserDoesNotExist -Username $Username)) { return }
 
@@ -147,7 +147,7 @@ $button.Add_Click({
         }
 
         Update-Progress 40 "Enabling remote mailbox..."
-        $ExchangeServer = "yourexchange"
+        $ExchangeServer = "<yourexchangeserver>"
         $Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$ExchangeServer/PowerShell/" -Authentication Kerberos
         Import-PSSession $Session -DisableNameChecking
         Write-Log "Connected to Exchange server: $ExchangeServer"
@@ -159,8 +159,8 @@ $button.Add_Click({
 
         Update-Progress 50 "Starting AD sync..."
         Start-AdSyncSyncCycle -PolicyType Delta
-        Write-Log "Waiting 5 minutes before proceeding to Teams provisioning..."
-        Start-Sleep -Seconds 300
+        Write-Log "Waiting 2 minutes before proceeding to Teams provisioning..."
+        Start-Sleep -Seconds 120
 
         Update-Progress 60 "Checking Azure AD user..."
         $NewUserAAD = $null
@@ -189,32 +189,9 @@ $button.Add_Click({
             return
         }
 
-        Update-Progress 70 "Connecting to Microsoft Teams..."
-        try {
-            Connect-MicrosoftTeams -ErrorAction Stop
-            Write-Log "Connected to Microsoft Teams."
-        } catch {
-            Write-Log "Failed to connect to Microsoft Teams. Error: $_" "ERROR"
-            return
-        }
 
-
-        $teams = Get-Team | Where-Object {
-            Get-TeamUser -GroupId $_.GroupId | Where-Object { $_.User -eq $ReferenceUsername }
-        }
-        Write-Log "Retrieved Teams memberships for reference user: $ReferenceUsername"
-
-        foreach ($team in $teams) {
-            try {
-                Add-TeamUser -GroupId $team.GroupId -User $Username
-                Write-Log "Added $Username to team: $($team.DisplayName)"
-            } catch {
-                Write-Log "Failed to add $Username to team: $($team.DisplayName). Error: $_" "WARNING"
-            }
-        }
-
-        Update-Progress 85 "Adding to Azure AD groups..."
-        $ReferenceUserAAD = Get-MgUser -UserId "$ReferenceUsername@yourdomain.com"
+        Update-Progress 70 "Adding to Azure AD groups..."
+        $ReferenceUserAAD = Get-MgUser -UserId "$ReferenceUsername@<yourdomain>.com"
         $CloudGroups = Get-MgUserMemberOf -UserId $ReferenceUserAAD.Id | Where-Object { $_.ODataType -eq "#microsoft.graph.group" }
         Write-Log "Retrieved Azure AD group memberships for reference user."
 
@@ -227,8 +204,8 @@ $button.Add_Click({
             }
         }
 
-        Update-Progress 95 "Assigning license..."
-        $SkuId = "licensesku"
+        Update-Progress 90 "Assigning license..."
+        $SkuId = "18181a46-0d4e-45cd-891e-60aabd171b4e"
         Set-MgUser -UserId $NewUserAAD.Id -UsageLocation "US"
         Set-MgUserLicense -UserId $NewUserAAD.Id -AddLicenses @{SkuId=$SkuId} -RemoveLicenses @()
         Write-Log "Assigned license ($SkuId) to user: $Username"
@@ -243,4 +220,4 @@ $button.Add_Click({
 # Show form
 $form.ShowDialog()
 
-
+& "<pathtoteamsmirrorscript>\TeamsMirroringTool.ps1"
