@@ -220,4 +220,4 @@ $button.Add_Click({
 # Show form
 $form.ShowDialog()
 
-& "<pathtoteamsmirrorscript>\TeamsMirroringTool.ps1"
+
